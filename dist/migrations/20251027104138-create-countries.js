@@ -1,4 +1,5 @@
 'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
     async up(queryInterface, Sequelize) {
@@ -59,4 +60,3 @@ module.exports = {
         await queryInterface.dropTable('Countries');
     }
 };
-export {};

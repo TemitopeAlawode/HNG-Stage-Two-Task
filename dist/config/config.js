@@ -1,7 +1,12 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
 // Importing dotenv to load env variables
-import dotenv from 'dotenv';
+const dotenv_1 = __importDefault(require("dotenv"));
 // Loads .env file contents into process.env
-dotenv.config();
+dotenv_1.default.config();
 // Configuration object for different environments (e.g., development, production)
 // const config = {
 module.exports = {

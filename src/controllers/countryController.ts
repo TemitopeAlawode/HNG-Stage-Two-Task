@@ -50,6 +50,12 @@ export const fetchCountryandRateHandler = async (req: Request, res: Response) =>
                     estimatedGdp = (country.population * randomMultiplier) / exchangeRate;
                 }
             }
+            
+            if (!currencyCode || !exchangeRates[currencyCode]) {
+    console.log(`Skipping ${country.name}: no valid currency/exchange rate`);
+    continue;
+}
+
             else {
                 console.log(`No valid currency or exchange rate for ${country.name}`);
                 estimatedGdp = 0;
