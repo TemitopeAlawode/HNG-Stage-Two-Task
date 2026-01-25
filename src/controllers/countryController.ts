@@ -36,11 +36,17 @@ export const fetchCountryandRateHandler = async (req: Request, res: Response) =>
             }
 
             const currencyCode = country.currencies?.[0]?.code;
-            let exchangeRate = null
+            // let exchangeRate = null
+const exchangeRate = currencyCode ? exchangeRates[currencyCode] : null;
             let estimatedGdp = null
 
+            if (!currencyCode || !exchangeRate || exchangeRate <= 0) {
+    console.log(`Skipping ${country.name}: invalid currency or exchange rate`);
+    continue;
+}
+
             if (currencyCode) {
-                exchangeRate = exchangeRates[currencyCode];
+                // exchangeRate = exchangeRates[currencyCode];
                 if (exchangeRate) {
                     // Generates a random integer between 1000 and 2000 (inclusive)
                     // Math.random() gives a decimal between 0 and 1
@@ -50,11 +56,23 @@ export const fetchCountryandRateHandler = async (req: Request, res: Response) =>
                     estimatedGdp = (country.population * randomMultiplier) / exchangeRate;
                 }
             }
-            
-            if (!currencyCode || !exchangeRates[currencyCode]) {
-    console.log(`Skipping ${country.name}: no valid currency/exchange rate`);
-    continue;
-}
+
+            //    if (currencyCode) {
+            //     exchangeRate = exchangeRates[currencyCode];
+            //     if (exchangeRate) {
+            //         // Generates a random integer between 1000 and 2000 (inclusive)
+            //         // Math.random() gives a decimal between 0 and 1
+            //         // Multiply by (max - min + 1) to scale the range, then add min to shift it up
+            //         // Math.floor() ensures the result is an integer
+            //         const randomMultiplier = Math.floor(Math.random() * (2000 - 1000 + 1)) + 1000;
+            //         estimatedGdp = (country.population * randomMultiplier) / exchangeRate;
+            //     }
+            // }
+
+//             if (!currencyCode || !exchangeRates[currencyCode]) {
+//     console.log(`Skipping ${country.name}: no valid currency/exchange rate`);
+//     continue;
+// }
 
             else {
                 console.log(`No valid currency or exchange rate for ${country.name}`);
