@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "build": "tsc",
+    "build": "tsc && copyfiles -u 1 src/fonts/**/* dist/ && mkdir -p dist/cache",
     "start": "node dist/server.js",
     "server": "nodemon --exec ts-node src/server.ts"
   },
@@ -26,6 +26,7 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@types/jimp": "^0.2.1"
+    "@types/jimp": "^0.2.1",
+    "copyfiles": "^2.4.1"
   }
 }

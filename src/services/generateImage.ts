@@ -1,111 +1,242 @@
-import { createCanvas, registerFont } from 'canvas';  // Import functions to create an image canvas and register fonts
-import path from 'path';  // For working with file paths
-import { promises as fs } from 'fs';  // For reading/writing files asynchronously
-import Country from '../models/Country';  // Import the Country model for database operations
+import { createCanvas, registerFont } from 'canvas';
+import path from 'path';
+import { promises as fs } from 'fs';
+import Country from '../models/Country';
 
 export async function generateSummaryImage() {
   try {
-    // Step 1: Verify and register the custom font
-    // Verify font file
-    const fontPath = path.join(__dirname, '../fonts/OpenSans-Regular.ttf');
-    console.log('Font path:', fontPath);
-    try {
-      await fs.access(fontPath); // Check if font file exists
-      console.log('Font file exists');
-      // Register multiple family names to handle mismatches
-      registerFont(fontPath, { family: 'Open Sans' });
-      registerFont(fontPath, { family: 'OpenSans' });
-      registerFont(fontPath, { family: 'Open Sans Regular' });
-    } catch (error: any) {
-      console.error('Font file error:', error.message);
-      throw new Error(`Failed to load font file: ${fontPath}`);
+    // Step 1: Find and verify the font file
+    const possibleFontPaths = [
+      path.join(__dirname, 'fonts', 'OpenSans-Regular.ttf'),
+      path.join(__dirname, '../fonts/OpenSans-Regular.ttf'),
+      path.join(process.cwd(), 'dist', 'fonts', 'OpenSans-Regular.ttf'),
+      path.join(process.cwd(), 'src', 'fonts', 'OpenSans-Regular.ttf'),
+    ];
+
+    let fontPath: string | null = null;
+    
+    for (const tryPath of possibleFontPaths) {
+      try {
+        await fs.access(tryPath);
+        fontPath = tryPath;
+        console.log('Font found at:', fontPath);
+        break;
+      } catch {
+        // Continue to next path
+      }
+    }
+
+    if (!fontPath) {
+      console.warn('Font file not found, will use system fallback font');
+    } else {
+      try {
+        // Register the font with multiple family names
+        registerFont(fontPath, { family: 'Open Sans' });
+        registerFont(fontPath, { family: 'OpenSans' });
+        registerFont(fontPath, { family: 'Open Sans Regular' });
+        console.log('Font registered successfully');
+      } catch (error: any) {
+        console.error('Font registration error:', error.message);
+      }
     }
 
     // Step 2: Fetch data from the database
-    // Fetch required data
-    const total = await Country.count(); // Count total number of countries
-    const top5 = await Country.findAll({ // Get top 5 countries by GDP
+    const total = await Country.count();
+    const top5 = await Country.findAll({
       order: [['estimated_gdp', 'DESC']],
       limit: 5,
       attributes: ['name', 'estimated_gdp'],
     });
-    const lastRefresh = await Country.max('last_refreshed_at'); // Get last refresh timestamp
+    const lastRefresh = await Country.max('last_refreshed_at');
 
     console.log('Total countries:', total);
     console.log('Top 5:', top5.map(c => ({ name: c.name, estimated_gdp: c.estimated_gdp })));
     console.log('Last refresh:', lastRefresh);
 
-    // Step 3: Create a canvas (1200x800) and set background
-    // Create a canvas (1200x800)
+    // Step 3: Create canvas
     const canvas = createCanvas(1200, 800);
     const ctx = canvas.getContext('2d');
 
     // Set white background
-    ctx.fillStyle = '#ffffff'; // White background
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, 1200, 800);
 
-    // Step 4: Try using the registered font (fallbacks included)
-    // Set font and color
-    const fontFamilies = ['Open Sans', 'OpenSans', 'Open Sans Regular', 'sans-serif'];
-    let fontLoaded = false;
-    for (const family of fontFamilies) {
-      ctx.font = `32px "${family}"`;
-      console.log(`Trying font: ${family}`);
-      try {
-        ctx.fillText('Test', 0, 0); // Test rendering to check font
-        fontLoaded = true;
-        break;
-      } catch (error: any) {
-        console.log(`Font ${family} failed:`, error.message);
-      }
-    }
-    if (!fontLoaded) {
-      console.warn('All font families failed, using sans-serif');
-      ctx.font = '32px sans-serif';
-    }
-    ctx.fillStyle = '#000000'; // Set text color to black
+    // Step 4: Set font (with fallbacks)
+    const fontFamilies = fontPath 
+      ? ['Open Sans', 'OpenSans', 'Open Sans Regular', 'Arial', 'sans-serif']
+      : ['Arial', 'sans-serif'];
+    
+    ctx.font = `32px ${fontFamilies.join(', ')}`;
+    ctx.fillStyle = '#000000';
 
     // Step 5: Add text to the image
-    // Add text to the image
-    ctx.fillText('Country Currency Summary', 50, 50);
-    ctx.fillText(`Total Countries: ${total}`, 50, 100);
+    ctx.fillText('Country Currency Summary', 50, 80);
+    ctx.fillText(`Total Countries: ${total}`, 50, 140);
 
-    // Format last refresh date (ISO string or N/A)
     const formattedDate =
       lastRefresh instanceof Date ? lastRefresh.toISOString() : 'N/A';
-    ctx.fillText(`Last Refresh: ${formattedDate}`, 50, 150);
-   
-    // Add top 5 countries with GDP values
-    ctx.fillText('Top 5 Countries by Estimated GDP:', 50, 200);
-   top5.forEach((country: any, index: number) => {
+    ctx.fillText(`Last Refresh: ${formattedDate}`, 50, 200);
+
+    // Add top 5 countries
+    ctx.fillText('Top 5 Countries by Estimated GDP:', 50, 280);
+    top5.forEach((country: any, index: number) => {
       const rawGdp = country.estimated_gdp;
-      // Parse estimated_gdp as a number, handling string or number
       const gdpNumber = typeof rawGdp === 'string' ? parseFloat(rawGdp) : rawGdp;
       const gdp = typeof gdpNumber === 'number' && !isNaN(gdpNumber)
-        ? gdpNumber.toFixed(2) // Display raw GDP with 2 decimal places
+        ? gdpNumber.toFixed(2)
         : 'N/A';
-      console.log('Country:', country.name, 'GDP:', gdp, 'Raw estimated_gdp:', rawGdp);
-      ctx.fillText(`${index + 1}. ${country.name}: ${gdp}`, 50, 250 + index * 50);
+      ctx.fillText(`${index + 1}. ${country.name}: ${gdp}`, 50, 340 + index * 60);
     });
-    // top5.forEach((country: any, index: number) => {
-    //   const gdp = typeof country.estimated_gdp === 'number' && !isNaN(country.estimated_gdp)
-    //     ? country.estimated_gdp.toFixed(2)
-    //     : 'N/A';
-    //   console.log('Country:', country.name, 'GDP:', gdp, 'Raw estimated_gdp:', country.estimated_gdp);
-    //   ctx.fillText(`${index + 1}. ${country.name}: ${gdp}`, 50, 250 + index * 50);
-    // });
 
-    // Step 6: Save the generated image to /cache/summary.png
-    // Save the image
-    const imagePath = path.join(__dirname, '../../cache/summary.png');
+    // Step 6: Ensure cache directory exists and save image
+    const cacheDir = path.join(__dirname, '../cache');
+    try {
+      await fs.mkdir(cacheDir, { recursive: true });
+    } catch (err) {
+      // Directory might already exist
+    }
+
+    const imagePath = path.join(cacheDir, 'summary.png');
     const buffer = canvas.toBuffer('image/png');
     await fs.writeFile(imagePath, buffer);
-    console.log('Image saved:', imagePath);
+    console.log('Image saved successfully at:', imagePath);
+    
+    return imagePath;
   } catch (error: any) {
     console.error('Error generating summary image:', error.message);
     throw new Error('Failed to generate summary image');
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+// import { createCanvas, registerFont } from 'canvas';  // Import functions to create an image canvas and register fonts
+// import path from 'path';  // For working with file paths
+// import { promises as fs } from 'fs';  // For reading/writing files asynchronously
+// import Country from '../models/Country';  // Import the Country model for database operations
+
+// export async function generateSummaryImage() {
+//   try {
+//     // Step 1: Verify and register the custom font
+//     // Verify font file
+//     const fontPath = path.join(__dirname, '../fonts/OpenSans-Regular.ttf');
+//     console.log('Font path:', fontPath);
+//     try {
+//       await fs.access(fontPath); // Check if font file exists
+//       console.log('Font file exists');
+//       // Register multiple family names to handle mismatches
+//       registerFont(fontPath, { family: 'Open Sans' });
+//       registerFont(fontPath, { family: 'OpenSans' });
+//       registerFont(fontPath, { family: 'Open Sans Regular' });
+//     } catch (error: any) {
+//       console.error('Font file error:', error.message);
+//       throw new Error(`Failed to load font file: ${fontPath}`);
+//     }
+
+//     // Step 2: Fetch data from the database
+//     // Fetch required data
+//     const total = await Country.count(); // Count total number of countries
+//     const top5 = await Country.findAll({ // Get top 5 countries by GDP
+//       order: [['estimated_gdp', 'DESC']],
+//       limit: 5,
+//       attributes: ['name', 'estimated_gdp'],
+//     });
+//     const lastRefresh = await Country.max('last_refreshed_at'); // Get last refresh timestamp
+
+//     console.log('Total countries:', total);
+//     console.log('Top 5:', top5.map(c => ({ name: c.name, estimated_gdp: c.estimated_gdp })));
+//     console.log('Last refresh:', lastRefresh);
+
+//     // Step 3: Create a canvas (1200x800) and set background
+//     // Create a canvas (1200x800)
+//     const canvas = createCanvas(1200, 800);
+//     const ctx = canvas.getContext('2d');
+
+//     // Set white background
+//     ctx.fillStyle = '#ffffff'; // White background
+//     ctx.fillRect(0, 0, 1200, 800);
+
+//     // Step 4: Try using the registered font (fallbacks included)
+//     // Set font and color
+//     const fontFamilies = ['Open Sans', 'OpenSans', 'Open Sans Regular', 'sans-serif'];
+//     let fontLoaded = false;
+//     for (const family of fontFamilies) {
+//       ctx.font = `32px "${family}"`;
+//       console.log(`Trying font: ${family}`);
+//       try {
+//         ctx.fillText('Test', 0, 0); // Test rendering to check font
+//         fontLoaded = true;
+//         break;
+//       } catch (error: any) {
+//         console.log(`Font ${family} failed:`, error.message);
+//       }
+//     }
+//     if (!fontLoaded) {
+//       console.warn('All font families failed, using sans-serif');
+//       ctx.font = '32px sans-serif';
+//     }
+//     ctx.fillStyle = '#000000'; // Set text color to black
+
+//     // Step 5: Add text to the image
+//     // Add text to the image
+//     ctx.fillText('Country Currency Summary', 50, 50);
+//     ctx.fillText(`Total Countries: ${total}`, 50, 100);
+
+//     // Format last refresh date (ISO string or N/A)
+//     const formattedDate =
+//       lastRefresh instanceof Date ? lastRefresh.toISOString() : 'N/A';
+//     ctx.fillText(`Last Refresh: ${formattedDate}`, 50, 150);
+   
+//     // Add top 5 countries with GDP values
+//     ctx.fillText('Top 5 Countries by Estimated GDP:', 50, 200);
+//    top5.forEach((country: any, index: number) => {
+//       const rawGdp = country.estimated_gdp;
+//       // Parse estimated_gdp as a number, handling string or number
+//       const gdpNumber = typeof rawGdp === 'string' ? parseFloat(rawGdp) : rawGdp;
+//       const gdp = typeof gdpNumber === 'number' && !isNaN(gdpNumber)
+//         ? gdpNumber.toFixed(2) // Display raw GDP with 2 decimal places
+//         : 'N/A';
+//       console.log('Country:', country.name, 'GDP:', gdp, 'Raw estimated_gdp:', rawGdp);
+//       ctx.fillText(`${index + 1}. ${country.name}: ${gdp}`, 50, 250 + index * 50);
+//     });
+//     // top5.forEach((country: any, index: number) => {
+//     //   const gdp = typeof country.estimated_gdp === 'number' && !isNaN(country.estimated_gdp)
+//     //     ? country.estimated_gdp.toFixed(2)
+//     //     : 'N/A';
+//     //   console.log('Country:', country.name, 'GDP:', gdp, 'Raw estimated_gdp:', country.estimated_gdp);
+//     //   ctx.fillText(`${index + 1}. ${country.name}: ${gdp}`, 50, 250 + index * 50);
+//     // });
+
+//     // Step 6: Save the generated image to /cache/summary.png
+//     // Save the image
+//     const imagePath = path.join(__dirname, '../../cache/summary.png');
+//     const buffer = canvas.toBuffer('image/png');
+//     await fs.writeFile(imagePath, buffer);
+//     console.log('Image saved:', imagePath);
+//   } catch (error: any) {
+//     console.error('Error generating summary image:', error.message);
+//     throw new Error('Failed to generate summary image');
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
