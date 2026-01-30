@@ -1,32 +1,3 @@
-// import { Sequelize } from 'sequelize';
-
-// const isProduction = process.env.NODE_ENV === 'production';
-
-// const sequelize = new Sequelize(
-//   process.env.DB_NAME as string,
-//   process.env.DB_USER as string,
-//   process.env.DB_PASSWORD as string,
-//   {
-//     host: process.env.DB_HOST,
-//     port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
-//     dialect: 'mysql',
-//     dialectOptions: isProduction ? {
-//       ssl: {
-//         require: true,
-//         rejectUnauthorized: false,
-//       },
-//     } : {},
-//     logging: !isProduction,
-//   }
-// );
-
-// export default sequelize;
-
-
-
-
-
-
 import { Sequelize } from 'sequelize';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -37,7 +8,7 @@ const sequelize = new Sequelize(
   process.env.DB_PASSWORD as string,
   {
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306, // MySQL default port is 3306, not 5432
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
     dialect: 'mysql',
     dialectOptions: isProduction ? {
       ssl: {
@@ -49,23 +20,52 @@ const sequelize = new Sequelize(
   }
 );
 
-// Test connection
-const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log(
-      isProduction
-        ? 'Connected to production MySQL database successfully'
-        : 'Connected to local MySQL database successfully'
-    );
-  } catch (error) {
-    console.error('Unable to connect to the MySQL database:', error);
-  }
-};
-
-testConnection();
-
 export default sequelize;
+
+
+
+
+
+
+// import { Sequelize } from 'sequelize';
+
+// const isProduction = process.env.NODE_ENV === 'production';
+
+// const sequelize = new Sequelize(
+//   process.env.DB_NAME as string,
+//   process.env.DB_USER as string,
+//   process.env.DB_PASSWORD as string,
+//   {
+//     host: process.env.DB_HOST,
+//     port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306, // MySQL default port is 3306, not 5432
+//     dialect: 'mysql',
+//     dialectOptions: isProduction ? {
+//       ssl: {
+//         require: true,
+//         rejectUnauthorized: false,
+//       },
+//     } : {},
+//     logging: !isProduction,
+//   }
+// );
+
+// // Test connection
+// const testConnection = async () => {
+//   try {
+//     await sequelize.authenticate();
+//     console.log(
+//       isProduction
+//         ? 'Connected to production MySQL database successfully'
+//         : 'Connected to local MySQL database successfully'
+//     );
+//   } catch (error) {
+//     console.error('Unable to connect to the MySQL database:', error);
+//   }
+// };
+
+// testConnection();
+
+// export default sequelize;
 
 
 
